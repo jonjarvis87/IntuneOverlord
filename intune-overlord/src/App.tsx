@@ -340,6 +340,14 @@ function App({ authConfig, onAuthConfigChange }: AppProps) {
 
   const clientIdConfigured = Boolean(authConfig.clientId)
 
+  // Auto-load policies as soon as the user successfully signs in.
+  useEffect(() => {
+    if (isAuthenticated && policies.length === 0 && !isBusy) {
+      void loadPolicies()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAuthenticated])
+
   const filteredPolicies = useMemo(() => {
     const searchValue = policySearch.trim().toLowerCase()
 
