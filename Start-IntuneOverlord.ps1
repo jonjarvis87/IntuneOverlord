@@ -37,7 +37,24 @@ else {
 }
 
 if (-not (Test-CommandExists -Name 'node')) {
-  throw 'Node.js is not installed or is not in PATH.'
+  $commonNodePaths = @(
+    "$env:ProgramFiles\nodejs",
+    "${env:ProgramFiles(x86)}\nodejs",
+    "$env:LOCALAPPDATA\Programs\nodejs",
+    "$env:APPDATA\nvm\$(Get-ChildItem "$env:APPDATA\nvm" -Filter 'v*' -Directory -ErrorAction SilentlyContinue | Sort-Object Name -Descending | Select-Object -ExpandProperty Name -First 1)"
+  )
+
+  $foundNodePath = $commonNodePaths | Where-Object { $_ -and (Test-Path (Join-Path $_ 'node.exe')) } | Select-Object -First 1
+
+  if ($foundNodePath) {
+    Write-Host "Node.js found at '$foundNodePath' but not in PATH. Adding for this session..." -ForegroundColor Yellow
+    $env:PATH = "$foundNodePath;$env:PATH"
+  }
+  else {
+    Write-Host 'Node.js is not installed or is not in PATH.' -ForegroundColor Red
+    Write-Host 'Download and install Node.js (LTS) from: https://nodejs.org/en/download' -ForegroundColor Yellow
+    throw 'Node.js is required to run Intune Overlord.'
+  }
 }
 
 if (-not (Test-CommandExists -Name 'npm')) {
