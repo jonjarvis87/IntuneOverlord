@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { ChangeEvent } from 'react'
 import Papa from 'papaparse'
 import { useIsAuthenticated, useMsal } from '@azure/msal-react'
-import type { RuntimeAuthConfig } from './main'
 import './App.css'
 
 type AssignmentMode = 'include' | 'exclude'
@@ -273,11 +272,6 @@ const trimAndDedupeDrafts = (drafts: AssignmentDraft[]) => {
   return Array.from(unique.values())
 }
 
-type AppProps = {
-  authConfig: RuntimeAuthConfig
-  onAuthConfigChange: (nextConfig: RuntimeAuthConfig, requestAutoSignIn?: boolean) => void
-}
-
 // ---------------------------------------------------------------------------
 // Module-level constants and pure helpers (stable across renders)
 // ---------------------------------------------------------------------------
@@ -314,7 +308,7 @@ const downloadText = (fileName: string, content: string, mimeType: string) => {
   URL.revokeObjectURL(objectUrl)
 }
 
-function App({ authConfig, onAuthConfigChange }: AppProps) {
+function App() {
   const { instance, accounts } = useMsal()
   const isAuthenticated = useIsAuthenticated()
 
@@ -332,10 +326,6 @@ function App({ authConfig, onAuthConfigChange }: AppProps) {
   const [isViewLoading, setIsViewLoading] = useState(false)
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
   const [statusMessage, setStatusMessage] = useState('Sign in and load policies to begin.')
-  const [setupClientId, setSetupClientId] = useState('')
-  const [setupTenantId, setSetupTenantId] = useState('')
-
-  const clientIdConfigured = Boolean(authConfig.clientId)
 
   // Auto-load policies as soon as the user successfully signs in.
   useEffect(() => {
@@ -941,12 +931,6 @@ function App({ authConfig, onAuthConfigChange }: AppProps) {
     await instance.logoutRedirect()
   }
 
-  const saveConfig = () => {
-    const clientId = setupClientId.trim()
-    const tenantId = setupTenantId.trim()
-    if (!clientId || !tenantId) return
-    onAuthConfigChange({ clientId, tenantId }, true)
-  }
 
   return (
     <div className="app-shell">
@@ -970,78 +954,14 @@ function App({ authConfig, onAuthConfigChange }: AppProps) {
                 Sign out
               </button>
             </>
-          ) : clientIdConfigured ? (
-            <>
-              <button type="button" className="primary" onClick={() => void signIn()} disabled={isBusy}>
-                Sign in
-              </button>
-              <button
-                type="button"
-                className="secondary"
-                onClick={() => onAuthConfigChange({ clientId: '', tenantId: 'organizations' })}
-                disabled={isBusy}
-                title="Remove saved configuration and re-run setup"
-              >
-                Reset setup
-              </button>
-            </>
-          ) : null}
+          ) : (
+            <button type="button" className="primary" onClick={() => void signIn()} disabled={isBusy}>
+              Sign in
+            </button>
+          )}
         </div>
       </header>
 
-      {!isAuthenticated && !clientIdConfigured && (
-        <section className="setup-card">
-          <h2 className="setup-card-title">First-time setup</h2>
-          <p className="setup-card-intro">
-            Register an app in Microsoft Entra, then paste the details below to connect.
-          </p>
-          <ol className="setup-steps">
-            <li>Azure Portal → Entra ID → App registrations → <strong>New registration</strong></li>
-            <li>
-              Under <strong>Redirect URIs</strong>, add a <strong>Single-page application (SPA)</strong> URI:{' '}
-              <code className="setup-uri">{window.location.origin}</code>
-            </li>
-            <li>
-              Add delegated API permissions:{' '}
-              <code>DeviceManagementConfiguration.ReadWrite.All</code>,{' '}
-              <code>DeviceManagementManagedDevices.Read.All</code>,{' '}
-              <code>DeviceManagementScripts.ReadWrite.All</code>,{' '}
-              <code>Group.Read.All</code>
-            </li>
-            <li>Click <strong>Grant admin consent</strong> for your organisation</li>
-          </ol>
-          <div className="setup-fields">
-            <input
-              className="setup-field-input"
-              value={setupTenantId}
-              onChange={(e) => setSetupTenantId(e.target.value)}
-              placeholder="Tenant ID or domain (e.g. contoso.onmicrosoft.com)"
-            />
-            <input
-              className="setup-field-input"
-              value={setupClientId}
-              onChange={(e) => setSetupClientId(e.target.value)}
-              placeholder="Client ID (Application ID)"
-            />
-            <button
-              type="button"
-              className="primary"
-              onClick={saveConfig}
-              disabled={!setupClientId.trim() || !setupTenantId.trim()}
-            >
-              Save &amp; Sign in
-            </button>
-          </div>
-        </section>
-      )}
-
-      {!isAuthenticated && clientIdConfigured && (
-        <section className="setup-hint setup-hint--ready">
-          <span>
-            App registered — client ID <code>{authConfig.clientId}</code>. Click <strong>Sign in</strong> to authenticate.
-          </span>
-        </section>
-      )}
 
       <section className="controls-row">
         <button type="button" className="primary" onClick={runBulkAdd} disabled={isBusy || !isAuthenticated || !selectedPolicyIds.size}>
