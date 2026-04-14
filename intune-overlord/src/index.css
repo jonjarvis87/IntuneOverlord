@@ -1,13 +1,34 @@
 :root {
-  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-  line-height: 1.4;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  line-height: 1.5;
   font-weight: 400;
-  color: #ffeaa0;
-  background: #020204;
+  color: #f0f0f0;
+  background: #0a0a0a;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+
+  --accent: #2e7d82;
+  --accent-hover: #1f5c60;
+  --accent-light: #5ab0b5;
+  --accent-dim: rgba(46, 125, 130, 0.12);
+  --accent-dim-hover: rgba(46, 125, 130, 0.2);
+  --bg-page: #0a0a0a;
+  --bg-app: #111111;
+  --bg-surface: #171717;
+  --bg-surface-2: #1f1f1f;
+  --bg-input: #131313;
+  --border: #2a2a2a;
+  --border-subtle: #1e1e1e;
+  --text: #f0f0f0;
+  --text-secondary: #9ca3af;
+  --text-muted: #4b5563;
+  --danger: #dc2626;
+  --danger-bg: rgba(220, 38, 38, 0.08);
+  --danger-border: rgba(220, 38, 38, 0.4);
+  --danger-deep-bg: rgba(220, 38, 38, 0.15);
+  --danger-deep-border: rgba(220, 38, 38, 0.6);
 }
 
 * {
@@ -17,12 +38,7 @@
 body {
   margin: 0;
   min-height: 100vh;
-  background:
-    radial-gradient(circle at 20% 30%, rgba(255, 255, 255, 0.18) 0 1px, transparent 1.8px),
-    radial-gradient(circle at 80% 22%, rgba(255, 255, 255, 0.12) 0 1px, transparent 1.7px),
-    radial-gradient(circle at 63% 72%, rgba(255, 255, 255, 0.15) 0 1px, transparent 1.6px),
-    radial-gradient(circle at top, #1a1300 0%, #020204 44%, #010102 100%);
-  background-size: auto, auto, auto, auto;
+  background: var(--bg-page);
 }
 
 #root {
