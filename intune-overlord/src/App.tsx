@@ -467,14 +467,23 @@ function App() {
 
   const getAllPages = async (token: string, endpoint: string): Promise<Record<string, unknown>[]> => {
     const all: Record<string, unknown>[] = []
-    let nextUrl: string | null = `https://graph.microsoft.com/${graphApiVersion}${endpoint}`
+    // Request the maximum page size upfront to minimise round-trips and avoid
+    // the Intune backend bug that returns broken skiptokens on page 2+.
+    const sep = endpoint.includes('?') ? '&' : '?'
+    let nextUrl: string | null = `https://graph.microsoft.com/${graphApiVersion}${endpoint}${sep}$top=999`
 
     while (nextUrl) {
       const response = await fetch(nextUrl, {
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
       })
       const text = await response.text()
-      if (!response.ok) throw new Error(`Graph GET ${nextUrl} failed: ${response.status} ${text}`)
+      if (!response.ok) {
+        // First page failure — propagate so safeGet can handle it (403/404 skip, others throw)
+        if (all.length === 0) throw new Error(`Graph GET ${nextUrl} failed: ${response.status} ${text}`)
+        // Subsequent page failure (known Intune 500 skiptoken bug) — return what we have
+        console.warn(`Pagination stopped early on ${nextUrl}: ${response.status}`)
+        break
+      }
       const data = JSON.parse(text) as { value?: Record<string, unknown>[]; '@odata.nextLink'?: string }
       all.push(...(data.value ?? []))
       nextUrl = data['@odata.nextLink'] ?? null
