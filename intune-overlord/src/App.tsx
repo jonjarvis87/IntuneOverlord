@@ -465,6 +465,24 @@ function App() {
     return JSON.parse(text) as T
   }
 
+  const getAllPages = async (token: string, endpoint: string): Promise<Record<string, unknown>[]> => {
+    const all: Record<string, unknown>[] = []
+    let nextUrl: string | null = `https://graph.microsoft.com/${graphApiVersion}${endpoint}`
+
+    while (nextUrl) {
+      const response = await fetch(nextUrl, {
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      })
+      const text = await response.text()
+      if (!response.ok) throw new Error(`Graph GET ${nextUrl} failed: ${response.status} ${text}`)
+      const data = JSON.parse(text) as { value?: Record<string, unknown>[]; '@odata.nextLink'?: string }
+      all.push(...(data.value ?? []))
+      nextUrl = data['@odata.nextLink'] ?? null
+    }
+
+    return all
+  }
+
   const fetchAssignments = async (token: string, policy: PolicyRecord) => {
     const result = await graphRequest<{ value?: Record<string, unknown>[] }>(
       token,
@@ -497,7 +515,7 @@ function App() {
       const token = await getToken()
       const safeGet = async (endpoint: string) => {
         try {
-          return await graphRequest<{ value?: Record<string, unknown>[] }>(token, endpoint)
+          return { value: await getAllPages(token, endpoint) }
         } catch (err) {
           const msg = err instanceof Error ? err.message : String(err)
           // 403 = missing scope; 404 = not licensed — skip silently
