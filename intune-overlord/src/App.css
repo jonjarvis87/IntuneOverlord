@@ -826,6 +826,113 @@ button:disabled,
   text-decoration: underline;
 }
 
+.credit-faq-link {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--accent-light);
+  font-size: 0.75rem;
+  font-family: inherit;
+  cursor: pointer;
+  text-decoration: none;
+}
+.credit-faq-link:hover { text-decoration: underline; }
+
+/* ── FAQ page ───────────────────────────────────────────── */
+.faq-shell {
+  width: min(1100px, 100% - 2rem);
+  margin: 2rem auto;
+  padding: 0 0 3rem;
+}
+
+.faq-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 2rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.faq-title {
+  margin: 0;
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: var(--accent-light);
+  letter-spacing: -0.02em;
+}
+
+.faq-subtitle {
+  margin: 0.3rem 0 0;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+.faq-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0 2.5rem;
+  align-items: start;
+}
+
+.faq-col {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.faq-section {
+  padding: 1.5rem 0;
+  border-bottom: 1px solid var(--border-subtle);
+}
+.faq-section:last-child { border-bottom: none; }
+
+.faq-section h2 {
+  margin: 0 0 0.75rem;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text);
+  letter-spacing: -0.01em;
+}
+
+.faq-section p {
+  margin: 0 0 0.65rem;
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  line-height: 1.65;
+}
+.faq-section p:last-child { margin-bottom: 0; }
+
+.faq-ul,
+.faq-ol {
+  margin: 0 0 0.65rem;
+  padding-left: 1.4rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  line-height: 1.55;
+}
+.faq-ul:last-child,
+.faq-ol:last-child { margin-bottom: 0; }
+
+.faq-section code {
+  font-family: 'Consolas', monospace;
+  background: var(--bg-surface-2);
+  padding: 0.1em 0.4em;
+  border-radius: 4px;
+  color: var(--accent-light);
+  font-size: 0.82em;
+}
+
+@media (max-width: 800px) {
+  .faq-grid { grid-template-columns: 1fr; }
+  .faq-header { flex-direction: column; align-items: flex-start; }
+}
+
 /* ── Responsive ─────────────────────────────────────────── */
 @media (max-width: 900px) {
   .topbar-input { width: 150px; }

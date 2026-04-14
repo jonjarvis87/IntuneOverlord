@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { ChangeEvent } from 'react'
 import Papa from 'papaparse'
 import { useIsAuthenticated, useMsal } from '@azure/msal-react'
+import { Faq } from './Faq'
 import './App.css'
 
 type AssignmentMode = 'include' | 'exclude'
@@ -322,6 +323,7 @@ function App() {
   ])
   const [draftGroupNames, setDraftGroupNames] = useState<string[]>([''])
   const [activeTab, setActiveTab] = useState<'assign' | 'view'>('assign')
+  const [activePage, setActivePage] = useState<'app' | 'faq'>('app')
   const [existingAssignments, setExistingAssignments] = useState<ExistingPolicyBlock[]>([])
   const [isViewLoading, setIsViewLoading] = useState(false)
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
@@ -959,6 +961,10 @@ function App() {
   }
 
 
+  if (activePage === 'faq') {
+    return <Faq onBack={() => setActivePage('app')} />
+  }
+
   return (
     <div className="app-shell">
       {deleteConfirmOpen && (
@@ -1237,6 +1243,10 @@ function App() {
       </footer>
       <div className="app-credit">
         Created by <a href="https://www.cloudendpoint.ai" target="_blank" rel="noreferrer">Jon Jarvis</a>, Microsoft MVP in Intune
+        {' · '}
+        <button type="button" className="credit-faq-link" onClick={() => setActivePage('faq')}>
+          Documentation &amp; FAQ
+        </button>
       </div>
     </div>
   )
