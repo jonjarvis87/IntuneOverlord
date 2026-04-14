@@ -1235,6 +1235,9 @@ function App() {
         <span>{isBusy ? 'Working...' : 'Ready'}</span>
         <span>{statusMessage}</span>
       </footer>
+      <div className="app-credit">
+        Created by <a href="https://www.cloudendpoint.ai" target="_blank" rel="noreferrer">Jon Jarvis</a>, Microsoft MVP in Intune
+      </div>
     </div>
   )
 }

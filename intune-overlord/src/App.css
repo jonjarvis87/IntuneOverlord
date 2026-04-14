@@ -809,6 +809,23 @@ button:disabled,
   color: var(--text-muted);
 }
 
+/* ── Credit footer ──────────────────────────────────────── */
+.app-credit {
+  text-align: center;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  padding-top: 0.25rem;
+}
+
+.app-credit a {
+  color: var(--accent-light);
+  text-decoration: none;
+}
+
+.app-credit a:hover {
+  text-decoration: underline;
+}
+
 /* ── Responsive ─────────────────────────────────────────── */
 @media (max-width: 900px) {
   .topbar-input { width: 150px; }
