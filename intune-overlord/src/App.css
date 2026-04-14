@@ -906,3 +906,86 @@ button:disabled,
   border-color: #4a1520;
   color: #7a4050;
 }
+
+/* -------------------------------------------------------------------------
+   First-time setup card
+   ------------------------------------------------------------------------- */
+.setup-card {
+  border: 1px solid #4d4312;
+  border-radius: 12px;
+  background: #0e1008;
+  padding: 1.25rem 1.4rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.setup-card-title {
+  margin: 0;
+  color: #ffe81f;
+  font-size: 1.1rem;
+}
+
+.setup-card-intro {
+  margin: 0;
+  color: #d8ca8a;
+  font-size: 0.9rem;
+}
+
+.setup-steps {
+  margin: 0;
+  padding-left: 1.4rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  color: #c8ba80;
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
+
+.setup-steps code {
+  font-family: 'Consolas', monospace;
+  background: #1c1e14;
+  padding: 0.1em 0.4em;
+  border-radius: 4px;
+  color: #ffe81f;
+  font-size: 0.83em;
+}
+
+.setup-uri {
+  font-family: 'Consolas', monospace;
+  background: #1c1e14;
+  padding: 0.1em 0.4em;
+  border-radius: 4px;
+  color: #ffe81f;
+  font-size: 0.83em;
+  word-break: break-all;
+}
+
+.setup-fields {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  align-items: flex-start;
+}
+
+.setup-field-input {
+  flex: 1;
+  min-width: 240px;
+  border: 1px solid #4e4521;
+  border-radius: 8px;
+  background: #0a0b10;
+  color: #f9efb6;
+  padding: 0.55rem 0.65rem;
+  font-size: 0.88rem;
+  font-family: inherit;
+}
+
+.setup-field-input::placeholder {
+  color: #7a6e44;
+}
+
+.setup-field-input:focus {
+  outline: none;
+  border-color: #ffe81f;
+}

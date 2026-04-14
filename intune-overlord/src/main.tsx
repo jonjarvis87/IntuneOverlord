@@ -1,4 +1,4 @@
-import { StrictMode, useEffect, useRef, useState } from 'react'
+import { StrictMode, useRef, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import { PublicClientApplication } from '@azure/msal-browser'
 import { MsalProvider } from '@azure/msal-react'
@@ -10,85 +10,68 @@ export type RuntimeAuthConfig = {
   tenantId: string
 }
 
-const defaultAuthConfig: RuntimeAuthConfig = {
-  clientId: import.meta.env.VITE_AZURE_CLIENT_ID || '',
-  tenantId: import.meta.env.VITE_AZURE_TENANT_ID || 'organizations',
+const CONFIG_CLIENT_ID_KEY = 'intuneoverlord_client_id'
+const CONFIG_TENANT_ID_KEY = 'intuneoverlord_tenant_id'
+
+const loadConfig = (): RuntimeAuthConfig => ({
+  clientId: localStorage.getItem(CONFIG_CLIENT_ID_KEY) || import.meta.env.VITE_AZURE_CLIENT_ID || '',
+  tenantId: localStorage.getItem(CONFIG_TENANT_ID_KEY) || import.meta.env.VITE_AZURE_TENANT_ID || 'organizations',
+})
+
+const saveConfig = (config: RuntimeAuthConfig) => {
+  if (config.clientId) {
+    localStorage.setItem(CONFIG_CLIENT_ID_KEY, config.clientId)
+    localStorage.setItem(CONFIG_TENANT_ID_KEY, config.tenantId)
+  } else {
+    localStorage.removeItem(CONFIG_CLIENT_ID_KEY)
+    localStorage.removeItem(CONFIG_TENANT_ID_KEY)
+  }
 }
 
-const desktopRedirectUri = window.intuneOverlordDesktop?.isDesktop ? 'http://127.0.0.1:4783' : window.location.origin
-
 function RootApp() {
-  const [authConfig, setAuthConfig] = useState<RuntimeAuthConfig>(defaultAuthConfig)
+  const [authConfig, setAuthConfig] = useState<RuntimeAuthConfig>(loadConfig)
   const [msalInstance, setMsalInstance] = useState<PublicClientApplication | null>(null)
-  // Use a ref (not state) so the initMsal effect always reads the latest value
-  // without needing it in the dependency array — avoids stale closure issues.
   const pendingSignInRef = useRef(false)
+  const prevConfigRef = useRef<RuntimeAuthConfig | null>(null)
 
-  // Load live config from .env on startup (desktop only)
-  useEffect(() => {
-    const loadRuntimeConfig = async () => {
-      const runtimeConfig = await window.intuneOverlordDesktop?.getRuntimeConfig?.()
+  const initMsal = async (config: RuntimeAuthConfig) => {
+    const pca = new PublicClientApplication({
+      auth: {
+        clientId: config.clientId || '00000000-0000-0000-0000-000000000000',
+        authority: `https://login.microsoftonline.com/${config.tenantId || 'organizations'}`,
+        redirectUri: window.location.origin,
+        postLogoutRedirectUri: window.location.origin,
+      },
+      cache: {
+        cacheLocation: 'localStorage',
+      },
+    })
 
-      if (!runtimeConfig) {
-        return
-      }
+    await pca.initialize()
 
-      setAuthConfig({
-        clientId: runtimeConfig.clientId || defaultAuthConfig.clientId,
-        tenantId: runtimeConfig.tenantId || defaultAuthConfig.tenantId,
+    if (
+      pendingSignInRef.current &&
+      config.clientId &&
+      config.clientId !== '00000000-0000-0000-0000-000000000000' &&
+      pca.getAllAccounts().length === 0
+    ) {
+      pendingSignInRef.current = false
+      await pca.loginRedirect({
+        scopes: ['DeviceManagementConfiguration.ReadWrite.All', 'DeviceManagementManagedDevices.Read.All', 'Group.Read.All'],
       })
+      return
     }
 
-    void loadRuntimeConfig()
-  }, [])
+    setMsalInstance(pca)
+  }
 
-  // Re-create + initialise MSAL whenever the client ID or tenant changes.
-  // initialize() must be awaited before passing to MsalProvider so that
-  // handleRedirectPromise() runs and the redirect token is processed.
-  useEffect(() => {
-    let cancelled = false
-
-    const initMsal = async () => {
-      const pca = new PublicClientApplication({
-        auth: {
-          clientId: authConfig.clientId || '00000000-0000-0000-0000-000000000000',
-          authority: `https://login.microsoftonline.com/${authConfig.tenantId || 'organizations'}`,
-          redirectUri: desktopRedirectUri,
-          postLogoutRedirectUri: desktopRedirectUri,
-        },
-        cache: {
-          cacheLocation: 'localStorage',
-        },
-      })
-
-      await pca.initialize()
-
-      if (cancelled) return
-
-      // If onboarding just completed, fire loginRedirect immediately with this
-      // correctly-configured PCA — before it's handed to MsalProvider.
-      if (
-        pendingSignInRef.current &&
-        authConfig.clientId &&
-        authConfig.clientId !== '00000000-0000-0000-0000-000000000000' &&
-        pca.getAllAccounts().length === 0
-      ) {
-        pendingSignInRef.current = false
-        await pca.loginRedirect({
-          scopes: ['DeviceManagementConfiguration.ReadWrite.All', 'DeviceManagementManagedDevices.Read.All', 'Group.Read.All'],
-        })
-        // loginRedirect navigates the window away — nothing below runs.
-        return
-      }
-
-      setMsalInstance(pca)
-    }
-
-    void initMsal()
-    return () => {
-      cancelled = true
-    }
-  }, [authConfig.clientId, authConfig.tenantId])
+  // Initialise MSAL on first render and whenever clientId/tenantId changes
+  const configKey = `${authConfig.clientId}:${authConfig.tenantId}`
+  const prevKey = prevConfigRef.current ? `${prevConfigRef.current.clientId}:${prevConfigRef.current.tenantId}` : null
+  if (configKey !== prevKey) {
+    prevConfigRef.current = authConfig
+    void initMsal(authConfig)
+  }
 
   if (!msalInstance) {
     return null
@@ -99,9 +82,11 @@ function RootApp() {
       <App
         authConfig={authConfig}
         onAuthConfigChange={(nextConfig, requestAutoSignIn) => {
+          saveConfig(nextConfig)
           if (requestAutoSignIn) {
             pendingSignInRef.current = true
           }
+          setMsalInstance(null)
           setAuthConfig(nextConfig)
         }}
       />

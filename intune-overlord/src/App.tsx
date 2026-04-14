@@ -278,8 +278,6 @@ type AppProps = {
   onAuthConfigChange: (nextConfig: RuntimeAuthConfig, requestAutoSignIn?: boolean) => void
 }
 
-const desktopRedirectUri = window.intuneOverlordDesktop?.isDesktop ? 'http://127.0.0.1:4783' : window.location.origin
-
 // ---------------------------------------------------------------------------
 // Module-level constants and pure helpers (stable across renders)
 // ---------------------------------------------------------------------------
@@ -334,9 +332,8 @@ function App({ authConfig, onAuthConfigChange }: AppProps) {
   const [isViewLoading, setIsViewLoading] = useState(false)
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
   const [statusMessage, setStatusMessage] = useState('Sign in and load policies to begin.')
+  const [setupClientId, setSetupClientId] = useState('')
   const [setupTenantId, setSetupTenantId] = useState('')
-  const [setupOutput, setSetupOutput] = useState('')
-  const [setupSuccess, setSetupSuccess] = useState<boolean | null>(null)
 
   const clientIdConfigured = Boolean(authConfig.clientId)
 
@@ -932,15 +929,8 @@ function App({ authConfig, onAuthConfigChange }: AppProps) {
   }
 
   const signIn = async () => {
-    if (!clientIdConfigured) {
-      setStatusMessage('Set VITE_AZURE_CLIENT_ID first.')
-      return
-    }
-
     setIsBusy(true)
     setStatusMessage('Redirecting to Microsoft sign-in…')
-    // loginRedirect navigates the window away — the app reloads on return
-    // and MsalProvider processes the token via handleRedirectPromise automatically.
     await instance.loginRedirect({ scopes: graphScopes })
   }
 
@@ -951,66 +941,11 @@ function App({ authConfig, onAuthConfigChange }: AppProps) {
     await instance.logoutRedirect()
   }
 
-  const createTenantSetup = async () => {
-    if (!setupTenantId.trim()) {
-      setStatusMessage('Enter a tenant ID or tenant domain first.')
-      return
-    }
-
-    const desktopRunner = window.intuneOverlordDesktop?.runTenantSetup
-
-    if (!desktopRunner) {
-      setStatusMessage('Direct onboarding is only available in the desktop app.')
-      return
-    }
-
-    setIsBusy(true)
-    setSetupOutput('')
-    setStatusMessage('Starting direct Graph onboarding. Complete the Microsoft authentication popup to continue.')
-
-    try {
-      const result = await desktopRunner({
-        tenantId: setupTenantId.trim(),
-        appName: 'Intune Overlord',
-        redirectUri: desktopRedirectUri,
-      })
-      const combinedOutput = [result.stdout, result.stderr].filter(Boolean).join('\n').trim()
-
-      if (combinedOutput) {
-        setSetupOutput(combinedOutput)
-      }
-
-      setSetupSuccess(result.success)
-
-      if (!result.success) {
-        setStatusMessage(result.error || 'Tenant setup failed.')
-        return
-      }
-
-      const nextClientId = result.envValues?.VITE_AZURE_CLIENT_ID ?? ''
-      const nextTenantId = result.envValues?.VITE_AZURE_TENANT_ID ?? setupTenantId.trim() ?? 'organizations'
-
-      if (nextClientId) {
-        onAuthConfigChange(
-          {
-            clientId: nextClientId,
-            tenantId: nextTenantId || 'organizations',
-          },
-          true,
-        )
-      }
-
-      if (result.envUpdated) {
-        setStatusMessage('Tenant setup completed. Updating sign-in configuration and starting sign-in...')
-      } else {
-        setStatusMessage('Tenant setup completed.')
-      }
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Tenant setup failed.'
-      setStatusMessage(message)
-    } finally {
-      setIsBusy(false)
-    }
+  const saveConfig = () => {
+    const clientId = setupClientId.trim()
+    const tenantId = setupTenantId.trim()
+    if (!clientId || !tenantId) return
+    onAuthConfigChange({ clientId, tenantId }, true)
   }
 
   return (
@@ -1031,63 +966,72 @@ function App({ authConfig, onAuthConfigChange }: AppProps) {
           {isAuthenticated ? (
             <>
               <span className="auth-user">{accounts[0]?.username}</span>
-              <button type="button" className="secondary" onClick={signOut} disabled={isBusy}>
+              <button type="button" className="secondary" onClick={() => void signOut()} disabled={isBusy}>
                 Sign out
               </button>
             </>
           ) : clientIdConfigured ? (
-            <button type="button" className="primary" onClick={() => void signIn()} disabled={isBusy}>
-              Sign in
-            </button>
-          ) : (
             <>
-              <input
-                className="topbar-input"
-                value={setupTenantId}
-                onChange={(event) => setSetupTenantId(event.target.value)}
-                placeholder="Tenant ID or domain"
-                disabled={isBusy}
-                title="Your Entra tenant ID or domain (e.g. contoso.onmicrosoft.com)"
-              />
-              <button
-                type="button"
-                className="primary"
-                onClick={() => void createTenantSetup()}
-                disabled={isBusy || !setupTenantId.trim()}
-                title="Authenticate as admin and create the Intune Overlord app registration"
-              >
-                {isBusy ? 'Working…' : 'Create App'}
+              <button type="button" className="primary" onClick={() => void signIn()} disabled={isBusy}>
+                Sign in
               </button>
               <button
                 type="button"
                 className="secondary"
-                onClick={() => void signIn()}
+                onClick={() => onAuthConfigChange({ clientId: '', tenantId: 'organizations' })}
                 disabled={isBusy}
-                title="Sign in using VITE_AZURE_CLIENT_ID from .env"
+                title="Remove saved configuration and re-run setup"
               >
-                Sign in
+                Reset setup
               </button>
             </>
-          )}
+          ) : null}
         </div>
       </header>
 
-      {setupOutput && (
-        <div className={`setup-output-bar ${setupSuccess === false ? 'setup-output-bar--error' : 'setup-output-bar--success'}`}>
-          <pre className="setup-output-pre">{setupOutput}</pre>
-          <button
-            type="button"
-            className="setup-output-dismiss"
-            onClick={() => { setSetupOutput(''); setSetupSuccess(null) }}
-          >
-            ✕
-          </button>
-        </div>
-      )}
-
       {!isAuthenticated && !clientIdConfigured && (
-        <section className="setup-hint">
-          <strong>First-time setup:</strong> enter your tenant ID above and click <strong>Create App</strong> to authenticate as a Global Administrator — the app registration, permissions, and admin consent are handled automatically. Already have an app? Set <code>VITE_AZURE_CLIENT_ID</code> in your <code>.env</code> and click <strong>Sign in</strong>.
+        <section className="setup-card">
+          <h2 className="setup-card-title">First-time setup</h2>
+          <p className="setup-card-intro">
+            Register an app in Microsoft Entra, then paste the details below to connect.
+          </p>
+          <ol className="setup-steps">
+            <li>Azure Portal → Entra ID → App registrations → <strong>New registration</strong></li>
+            <li>
+              Under <strong>Redirect URIs</strong>, add a <strong>Single-page application (SPA)</strong> URI:{' '}
+              <code className="setup-uri">{window.location.origin}</code>
+            </li>
+            <li>
+              Add delegated API permissions:{' '}
+              <code>DeviceManagementConfiguration.ReadWrite.All</code>,{' '}
+              <code>DeviceManagementManagedDevices.Read.All</code>,{' '}
+              <code>DeviceManagementScripts.ReadWrite.All</code>,{' '}
+              <code>Group.Read.All</code>
+            </li>
+            <li>Click <strong>Grant admin consent</strong> for your organisation</li>
+          </ol>
+          <div className="setup-fields">
+            <input
+              className="setup-field-input"
+              value={setupTenantId}
+              onChange={(e) => setSetupTenantId(e.target.value)}
+              placeholder="Tenant ID or domain (e.g. contoso.onmicrosoft.com)"
+            />
+            <input
+              className="setup-field-input"
+              value={setupClientId}
+              onChange={(e) => setSetupClientId(e.target.value)}
+              placeholder="Client ID (Application ID)"
+            />
+            <button
+              type="button"
+              className="primary"
+              onClick={saveConfig}
+              disabled={!setupClientId.trim() || !setupTenantId.trim()}
+            >
+              Save &amp; Sign in
+            </button>
+          </div>
         </section>
       )}
 
@@ -1096,20 +1040,6 @@ function App({ authConfig, onAuthConfigChange }: AppProps) {
           <span>
             App registered — client ID <code>{authConfig.clientId}</code>. Click <strong>Sign in</strong> to authenticate.
           </span>
-          {window.intuneOverlordDesktop?.resetConfig && (
-            <button
-              type="button"
-              className="setup-hint-reset"
-              title="Remove stored client ID and re-run setup"
-              onClick={() => {
-                void window.intuneOverlordDesktop!.resetConfig!().then(() => {
-                  onAuthConfigChange({ clientId: '', tenantId: 'organizations' })
-                })
-              }}
-            >
-              Reset setup
-            </button>
-          )}
         </section>
       )}
 
