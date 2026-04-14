@@ -7,8 +7,8 @@ import App from './App.tsx'
 
 const pca = new PublicClientApplication({
   auth: {
-    clientId: import.meta.env.VITE_AZURE_CLIENT_ID || '',
-    authority: `https://login.microsoftonline.com/${import.meta.env.VITE_AZURE_TENANT_ID || 'organizations'}`,
+    clientId: '3b96acc6-ee67-457f-84db-02a6baad96e7',
+    authority: 'https://login.microsoftonline.com/organizations',
     redirectUri: window.location.origin,
     postLogoutRedirectUri: window.location.origin,
   },
